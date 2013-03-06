@@ -26,21 +26,24 @@ object HammingCode{
 
   def x5(in: ?[Int], out: ![Int]) : PROC = proc{
     repeat{
-      val v = in?; out!(5*v);
+      val v = in?; out!(5*v); 
     }
   in.closein; out.closeout;
   }
 
   def Merge(in1: ?[Int], in2: ?[Int], out: ![Int]) : PROC = proc{
   var table = new immutable.TreeSet[Int]() 
+  table = table+0
   repeat {
-    alt(in1 --> {val v = in1?; 
-                if (!table.contains(v))
- {out!(v); table=(table+v)}}
-      | in2 --> {val v = in2?; 
-                if (!table.contains(v))
- {out!(v); table=(table+v)}}
-       )
+    var first, second = 0;
+    alt(in1 --> {var first = in1?;} 
+      | in2 --> {var first = in2?;}) 
+    alt(in1 --> {var second = in1?;} 
+      | in2 --> {var second = in2?;}) 
+                var temp = 0 ;
+                if (first > second) {temp = first; first = second; second = temp;}
+                if (!table.contains(first)){out!(first); table=(table+first)}
+                if (!table.contains(second)){out!(second); table=(table+second)}
         }
   in1.closein; in2.closein; out.closeout;
   }
@@ -58,8 +61,9 @@ object HammingCode{
   // Copy messages from output onto the console
   def TheConsole : PROC = proc{ repeat{ Console.println(output?) } }
 
-  val x2Input, x3Input, x5Input, x2Output, x3Output, x5Output, mergeToMerge, mergeToPrefix, tee1ToTee2, tee2ToTee3, output = OneOne[Int];
+  val x2Input, x3Input, x5Input, x3Output, mergeToMerge, mergeToPrefix, tee1ToTee2, tee2ToTee3, output = OneOne[Int];
   val prefixToTee = Buf[Int](1000);
+  val x2Output, x5Output = Buf[Int](1);
 
   def System =
     Prefix1(mergeToPrefix, prefixToTee) || Tee(prefixToTee, tee1ToTee2, output) || Tee(tee1ToTee2, tee2ToTee3, x2Input)  || Tee(tee2ToTee3, x3Input, x5Input) || x2(x2Input, x2Output) || x3(x3Input, x3Output) || x5(x5Input, x5Output) || Merge(x2Output, x3Output, mergeToMerge) || Merge(mergeToMerge, x5Output, mergeToPrefix)||TheConsole
